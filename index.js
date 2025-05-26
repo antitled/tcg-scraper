@@ -15,20 +15,34 @@ app.get('/api/scrape', async (req, res) => {
   }
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const name = $("h1").first().text().trim();
-    const marketPrice = $('[data-testid="product-details__price"] span').first().text().replace('$', '').trim();
-    const imageUrl = $("img[alt*='Product Image']").first().attr("src") || "";
-    const setName = $('[data-testid="product-details__set-name"]').first().text().trim();
-    const rarity = $('[data-testid="product-details__rarity"]').first().text().trim();
+    const name = $("h1[data-testid='product-details__product-name']").text().trim()
+      || $("h1").first().text().trim();
+
+    const marketPrice = $('[data-testid="product-details__price"]').text().replace('$', '').trim();
+
+    const imageUrl = $("img[alt*='Product Image']").attr("src") 
+      || $("img[src*='product-images']").attr("src") 
+      || "";
+
+    const setName = $('[data-testid="product-details__set-name"]').text().trim()
+      || $("div:contains('Set Name')").next().text().trim();
+
+    const rarity = $('[data-testid="product-details__rarity"]').text().trim()
+      || $("div:contains('Rarity')").next().text().trim();
 
     res.json({
       name,
       marketPrice,
-      imageUrl,
+      imageUrl: imageUrl.startsWith('http') ? imageUrl : 'https://www.tcgplayer.com' + imageUrl,
       set: setName,
       rarity,
       psaPrice: null,
